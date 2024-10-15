@@ -1,0 +1,293 @@
+---
+title: 'Retail Analysis: Luxury Store'
+output: html_document
+date: "2024-10-06"
+---
+
+A data-driven study for a luxury retail store, aimed at transforming information into valuable insights to simplify strategic decision-making.
+
+# 🚩 EDA Visualizations
+
+In this section, we explore the sales and benefits data through various visualizations to better understand the overall distribution, trends, and key insights that can guide further analysis.
+
+```{r data, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+# Load necessary libraries
+library(dplyr)
+library(readxl)
+library(httr)  # This library is used for making HTTP requests to download files
+library(ggplot2)
+
+# URL of the file on GitHub
+url <- "https://github.com/vitoroma101/Business-Intelligence-Projects/raw/72b033368376d14599fa810a7c6f37391cb9be7a/BI-Projects-Using-R/1_VENTAS-MIGUEL.xlsx"
+
+# Retrieve the content of the file
+response <- GET(url)
+
+# Save the content to a temporary file
+temp_file <- tempfile(fileext = ".xlsx")
+writeBin(content(response, "raw"), temp_file)
+
+# Read the Excel file
+data <- read_excel(temp_file)
+```
+
+### Boxplot of total sales
+
+```{r eda1, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+boxplot(data$Ventas, 
+        main = "Boxplot of Total Sales", 
+        xlab = "Total", 
+        ylab = "Sales",
+        col = "lightgray",  # Changed to a more professional color
+        border = "black")   # Added a black border for better definition
+```
+
+The sales boxplot shows a balanced distribution with no visible outliers, indicating that sales remain within a reasonable and consistent range across products, which suggests stability in sales figures.
+
+### Histogram of total sales
+
+```{r eda2, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+hist(data$Ventas, 
+     breaks = 50, 
+     main = "Histogram of Total Sales", 
+     xlab = "Total", 
+     col = "green")
+
+```
+
+The histogram shows a dispersed distribution of sales with peaks at various levels. This suggests sales across different product categories and prices, which is typical for luxury retailers.
+
+### Boxplot of profit by product
+
+```{r eda3, echo=TRUE, warning=FALSE, message=FALSE, out.width='90%', out.height='60%'}
+
+# Adjust margins before creating the boxplot
+par(mar = c(8, 4, 4, 2))  # Adjust margins (bottom, left, top, right)
+
+boxplot(Beneficio ~ Producto, 
+        data = data, 
+        main = "Boxplot of Profit by Product", 
+        xlab = "", 
+        ylab = "", 
+        col = "orange", 
+        las = 2,  # Rotate x-axis labels
+        cex.axis = 0.6)  # Reduce font size
+
+```
+
+This chart helps identify consistently profitable products, such as the Squash Racket and the Road Bike, as well as others with lower or more variable profit margins. This is useful for making decisions about pricing, promotions, or inventory management. The profit boxplot is key to spotting products with large profit margins, making it a complementary tool to sales data for focusing on highly profitable products and informing strategic decisions.
+
+### Relationship between sales and profit
+
+```{r eda4, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+plot(data$Ventas, data$Beneficio, 
+     main = "Relationship between Sales and Profit", 
+     xlab = "Sales", 
+     ylab = "Profit", 
+     pch = 19, 
+     col = "blue")
+
+```
+
+This scatter plot shows the relationship between sales and profits. At first glance, there seems to be a positive correlation: as sales increase, profits tend to rise as well, which makes sense. However, there are significant variations. For example, some points reflect relatively low profits despite having considerable sales volumes, which could indicate lower profit margins or higher associated costs.
+
+This type of chart is useful for analyzing whether higher sales consistently lead to higher profits or if there are cases where profits don’t scale with sales. It can help you identify products or categories where adjusting pricing or improving cost efficiency could be beneficial.
+
+# 🚩 Common Business Questions
+
+## 1. What are the Top 5 best-selling products historically?
+
+```{r q1, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+# Calculate frequency and total sales
+top_5_frequency <- data %>%
+  group_by(Producto) %>%
+  summarise(Frequency = n(), Total_Sales = sum(Ventas)) %>%
+  arrange(desc(Frequency)) %>%
+  slice(1:5) %>%
+  arrange(desc(Total_Sales))
+
+# Create horizontal bar chart
+ggplot(top_5_frequency, aes(x = reorder(Producto, Total_Sales), y = Total_Sales, fill = Producto)) +
+  geom_bar(stat = "identity", width = 0.7, show.legend = FALSE) +
+  labs(title = "Top 5 Best-Selling Products",
+       x = "Product",
+       y = "Total Sales") +
+  theme_minimal() +
+  coord_flip() +
+  theme(axis.text.y = element_text(angle = 0))
+
+```
+
+A large portion of demand is focused on the textile department, with only one appliance making it into the top 5. The revenues generated by the top four products are relatively similar. Although the most sold product is the Pantalón Vaquero, if the goal is to maximize revenue, it could be beneficial to focus on these products with balanced income generation.
+
+## 2. Which department had the highest profits?
+
+```{r q2, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+# Calculate total profits by department with percentage
+profits_department <- data %>%
+  group_by(Departamento) %>%
+  summarise(Total_Profit = sum(Beneficio)) %>%
+  mutate(Percent = round((Total_Profit / sum(Total_Profit)) * 100, 1)) %>%
+  arrange(desc(Total_Profit))
+
+# Create pie chart with labels
+ggplot(profits_department, aes(x = "", y = Total_Profit, fill = Departamento)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  theme_void() +
+  labs(title = "Profit Distribution by Department") +
+  geom_text(aes(label = paste0("$", round(Total_Profit, 2), "\n", Percent, "%")),
+            position = position_stack(vjust = 0.5)) +
+  theme(legend.position = "right")
+
+```
+
+In the pie chart, we observe that the textile department generates the highest profits, totaling $95,796.01 and accounting for 28.4% of the overall profits.
+
+This suggests that the textile department is key and should be well-stocked to meet demand and maintain this high level of profitability. On the other hand, it may be worth exploring strategies to improve the performance of other departments with lower profit contributions.
+
+## 3. What is the historical evolution of profits by department?
+
+```{r q3, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+# Stacked bar chart for monthly profits by department
+ggplot(data, aes(x = Meses, y = Beneficio, fill = Departamento)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Monthly Profits by Department", x = "Months", y = "Profits ($)") +
+  scale_y_continuous(labels = scales::dollar_format(prefix = "$", scale = 1e-3, suffix = "K")) +
+  theme_minimal()
+```
+
+The chart shows that the textile department experiences peaks in profits during February, May, and July. Beverages remain stable, except for a drop in June. Electronics stand out in February and June, though there’s a decline in March. Food exhibits a consistently low contribution, particularly in April, while sports contributes moderately but faces drops in July and August. Finally, IT shows a steady, low contribution throughout the period, with a notable decrease in May.
+
+In general terms, the average monthly net income is consistent, with a peak in February. However, there are notable declines in April, July, and August. Although February has been the most profitable month, it is advisable to continue monitoring these fluctuations to maintain stability throughout the year.
+
+# 4. What is the historical evolution of sales by store over time?
+```{r q4, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+# Group the data by Months and Store and sum the Total Sales 
+sales_store <- data %>%
+  group_by(Tienda, Meses) %>%
+  summarise(Total_Sales = sum(Ventas))
+
+# Convert months to factor and order them from January to August 
+sales_store$Meses <- factor(sales_store$Meses, levels = c("2022-08-01", "2022-07-01", "2022-06-01", "2022-05-01",
+                                                          "2022-04-01", "2022-03-01", "2022-02-01", "2022-01-01"))
+
+# Plot sales by store with stacked bars
+ggplot(sales_store, aes(x = Tienda, y = Total_Sales, fill = Meses)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Total Sales by Store and Month",
+       x = "Store",
+       y = "Total Sales ($)",
+       fill = "Months") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set3") +
+  coord_flip()
+```
+
+In the chart, Store 1 leads in accumulated sales, standing out in most months, especially at the beginning and end of the period, with a significantly higher total than other stores. Store 2, on the other hand, shows the lowest sales accumulation, with consistently low performance across months and no prominent peaks.
+
+Stores 3, 4, 5, and 6 exhibit similar behavior, with consistent contributions and minimal variations, placing them at an intermediate level. This suggests it may be beneficial to explore specific strategies to improve Store 2’s performance, while for Store 1, maintaining or increasing sales during slower months could further solidify its leading position.
+
+# 5. Which store had the highest sales?
+
+```{r q5, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+# Calculate total sales by store with percentage
+sales_store <- data %>%
+  group_by(Tienda) %>%
+  summarise(Total_Sales = sum(Ventas)) %>%
+  mutate(Percent = round((Total_Sales / sum(Total_Sales)) * 100, 1)) %>%
+  arrange(desc(Total_Sales))
+
+# Create pie chart with labels
+ggplot(sales_store, aes(x = "", y = Total_Sales, fill = Tienda)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  theme_void() +
+  labs(title = "Sales Distribution by Store") +
+  geom_text(aes(label = paste0("$", round(Total_Sales, 2), "\n", Percent, "%")),
+            position = position_stack(vjust = 0.5)) +
+  theme(legend.position = "right")
+```
+
+This chart confirms previous observations: globally, Store 1 leads with 22.9% of total sales. Stores 3, 4, and 5 show similar shares, ranging between 15.6% and 16.9%, indicating balanced performance. In contrast, Store 2 has the lowest share at 12.2%, reflecting a weaker performance.
+
+# 6. Which locations provide the highest net income?
+
+```{r q6, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+
+# Group profits by location
+profits_by_location <- data %>%
+  group_by(Provincia) %>%
+  summarise(Total_Profits = sum(Beneficio))
+
+# Create horizontal bar chart with profits by location and add labels
+ggplot(profits_by_location, aes(x = reorder(Provincia, Total_Profits), y = Total_Profits)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = scales::dollar(Total_Profits)), 
+            hjust = 1,  # Adjust horizontal position of labels
+            color = "black", size = 3) +  # Color and size of labels
+  labs(title = "Total Profits by Location",
+       x = "Location",
+       y = "Total Profits ($)") +
+  coord_flip() +  # This line flips the chart to make it horizontal
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # Center the title
+```
+
+The chart shows that Lugo and Segovia are in the range of $60,000 in total profits. In contrast, Salamanca and Barcelona report lower figures, both under $40,000. This indicates a notable gap, suggesting that targeted strategies may be beneficial to improve performance in these lower-earning locations.
+
+# 7. Which locations generated the lowest income?
+
+```{r q7, echo=TRUE, warning=FALSE, message=FALSE, out.width='70%', out.height='45%'}
+# Group sales by location
+sales_by_location <- data %>%
+  group_by(Provincia) %>%
+  summarise(Total_Sales = sum(Ventas)) %>%
+  arrange(Total_Sales)
+
+# Create horizontal bar chart with sales by location and add labels
+ggplot(sales_by_location, aes(x = reorder(Provincia, Total_Sales), y = Total_Sales)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = scales::dollar(Total_Sales)), 
+            hjust = 1,  # Adjust horizontal position of labels
+            color = "black", size = 3) +  # Color and size of labels
+  labs(title = "Total Sales by Location",
+       x = "Location",
+       y = "Total Sales ($)") +
+  coord_flip() +  # Flip the chart to make it horizontal
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # Center the title
+```
+
+The chart shows that Lugo and Segovia lead in total sales, hovering around $120,000 or slightly above, positioning them significantly ahead of other locations.
+
+In contrast, Barcelona and Sevilla have the lowest sales, close to $80,000. This suggests an opportunity to implement strategies to boost sales in these locations and narrow the gap with the leaders.
+
+# 🚩 Key Insights & Actions
+
+#### Strengthen the Textile Department:
+
+The demand and profitability in the textile department are consistently high, representing a significant portion of sales and profits. Maintaining adequate inventory levels in this department is essential to meet demand and ensure sustained profitability.
+
+#### Diversify and Optimize Other Departments:
+
+Some departments, such as Food and IT, show consistently low contributions. Targeted marketing strategies or promotions could help improve their performance, reducing reliance on the textile department.
+
+#### Maximize Sales in High-Potential Stores and Locations:
+
+Store 1 and locations like Lugo and Segovia lead in sales and accumulated profits, indicating strong markets. Increasing the availability of popular products and enhancing the customer experience in these areas could further solidify their leading positions.
+
+#### Boost Sales in Low-Performing Stores:
+
+Store 2 and locations like Barcelona and Seville have lower sales performance. Targeted promotions, increased visibility of key products, and adjusting the product mix to local preferences may help narrow the gap with leading stores and locations.
+
+#### Adjust Strategies for Seasonality:
+
+Sales analysis shows peaks in specific months, such as February in the textile department. Leveraging these seasonal patterns can allow for more efficient inventory planning and marketing campaigns, optimizing resources during high-demand periods.
